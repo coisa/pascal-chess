@@ -68,7 +68,8 @@ def render(repo, output, repository, revision):
         else:
             if not target.exists():
                 raise ValueError(f'Broken repository link: {source_page.name}: {value}')
-            url = f'https://github.com/{repository}/blob/{revision}/{quote(target.relative_to(repo).as_posix())}'
+            view = 'tree' if target.is_dir() else 'blob'
+            url = f'https://github.com/{repository}/{view}/{revision}/{quote(target.relative_to(repo).as_posix())}'
         if parsed.query:
             url += '?' + parsed.query
         if parsed.fragment:
@@ -87,13 +88,22 @@ def render(repo, output, repository, revision):
                     fence = ''
                 rendered.append(line)
                 continue
-            if fence:
+            if fence or line.startswith(('    ', '\t')):
                 rendered.append(line)
                 continue
-            # Inline code remains literal; documentation uses standard inline links.
-            chunks = re.split(r'(`[^`]*`)', line)
-            for index in range(0, len(chunks), 2):
-                chunks[index] = LINK.sub(lambda match: match[1] + target_url(path, match[2]) + (match[3] or '') + ')', chunks[index])
+            reference = re.match(r'^( {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*)(<[^>\n]+>|[^\s]+)(.*)$', line)
+            if reference:
+                rendered.append(reference[1] + target_url(path, reference[2]) + reference[3] + ('\n' if line.endswith('\n') else ''))
+                continue
+            def prose(text):
+                return LINK.sub(lambda match: match[1] + target_url(path, match[2]) + (match[3] or '') + ')', text)
+            # A closing delimiter must have exactly the opening backtick count.
+            chunks, cursor = [], 0
+            for span in re.finditer(r'(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)', line):
+                chunks.append(prose(line[cursor:span.start()]))
+                chunks.append(span[0])
+                cursor = span.end()
+            chunks.append(prose(line[cursor:]))
             rendered.append(''.join(chunks))
         return ''.join(rendered)
 
@@ -131,7 +141,7 @@ def render(repo, output, repository, revision):
             raise ValueError(f'Unsafe Wiki destination: {name}')
         if target.exists() and not target.is_file():
             raise ValueError(f'Wiki destination is not a file: {name}')
-        if target.exists() and name not in previous and name not in {'Home.md', '_Sidebar.md'}:
+        if target.exists() and name not in previous and name != 'Home.md':
             raise ValueError(f'Unmanaged Wiki page would be overwritten: {name}')
     for name in set(previous) - set(names):
         (output / name).unlink(missing_ok=True)

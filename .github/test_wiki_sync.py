@@ -77,6 +77,47 @@ class WikiTests(unittest.TestCase):
     def test_refuses_output_over_source(self):
         with self.assertRaises(ValueError): sync.render(self.repo, self.repo / 'docs', 'owner/game', SHA)
 
+    def test_preserves_multiple_backtick_delimiters(self):
+        literal = '``[example](missing.md)`` and ```a ` [other](absent.md)```'
+        (self.repo / 'docs/a.md').write_text('# First\n' + literal + '\n[Real](b.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn(literal, result)
+        self.assertIn('[Real](https://github.com/owner/game/wiki/b)', result)
+
+    def test_preserves_indented_code(self):
+        literal = '    [example](missing.md)\n\t[other](absent.md)\n'
+        (self.repo / 'docs/a.md').write_text('# First\n\n' + literal)
+        self.render()
+        self.assertIn(literal, (self.output / 'a.md').read_text())
+
+    def test_rewrites_reference_definitions(self):
+        (self.repo / 'docs/nested').mkdir()
+        (self.repo / 'docs/nested/page.md').write_text('# Nested\n')
+        (self.repo / 'docs/a.md').write_text('# First\n[Page][page] ![Picture][image]\n[page]: nested/page.md#section "Title"\n[image]: <pic.png>\n[code]: ../README.md\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('[page]: https://github.com/owner/game/wiki/nested--page#section "Title"', result)
+        self.assertIn('[image]: https://raw.githubusercontent.com/wiki/owner/game/assets/pic.png', result)
+        self.assertIn(f'[code]: https://github.com/owner/game/blob/{SHA}/README.md', result)
+
+    def test_uses_tree_urls_for_directories(self):
+        (self.repo / 'src').mkdir()
+        (self.repo / 'docs/a.md').write_text('# First\n[Sources](../src/)\n')
+        self.render()
+        self.assertIn(f'/tree/{SHA}/src)', (self.output / 'a.md').read_text())
+
+    def test_preserves_unmanaged_sidebar_and_initial_home(self):
+        self.output.mkdir()
+        (self.output / 'Home.md').write_text('Bootstrap')
+        (self.output / '_Sidebar.md').write_text('Manual navigation')
+        with self.assertRaises(ValueError): self.render()
+        self.assertEqual((self.output / '_Sidebar.md').read_text(), 'Manual navigation')
+        self.assertEqual((self.output / 'Home.md').read_text(), 'Bootstrap')
+        (self.output / '_Sidebar.md').unlink()
+        self.render()
+        self.assertIn('Published from', (self.output / 'Home.md').read_text())
+
     def test_refuses_symlink_ancestors_before_write_or_stale_delete(self):
         self.render()
         (self.output / 'assets').rename(self.output / 'manual-assets')

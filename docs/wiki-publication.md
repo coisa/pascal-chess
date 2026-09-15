@@ -8,7 +8,8 @@ reconcile it again. PR runs have no Wiki credential and never publish.
 The Wiki is generated: edit `docs/` and submit a PR instead of editing its
 managed pages. Markdown links between docs become Wiki links; assets are
 copied beneath `assets/`; links to source files point to the exact source SHA.
-Home and the sidebar are generated indexes. The manifest removes only stale
+Home and the sidebar are generated indexes. The initial Home bootstrap may be
+replaced; an existing unmanaged sidebar must be migrated explicitly. The manifest removes only stale
 previously managed files and leaves unrelated Wiki pages intact. Name clashes
 with existing unmanaged pages fail rather than silently overwrite them.
 
@@ -42,8 +43,7 @@ failed job is not a successful deployment.
 Preview and tests require no credentials:
 
 ```sh
-python3 .github/test_wiki_sync.py
-python3 .github/wiki_sync.py --output build/wiki-preview --repository coisa/pascal-chess --revision "$(git rev-parse HEAD)"
+make wiki-check
 ```
 
 To roll back published content, revert the source documentation and merge the
