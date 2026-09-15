@@ -2,7 +2,7 @@ name: Documentation Wiki
 
 on:
   pull_request:
-    paths: ['docs/**', 'Makefile', '.github/wiki_sync.py', '.github/test_wiki_sync.py', '.github/workflows/wiki.yml']
+    paths: ['docs/**', 'Makefile', '.github/requirements.txt', '.github/wiki_sync.py', '.github/test_wiki_sync.py', '.github/workflows/wiki.yml']
   push:
     branches: [master, main]
   workflow_dispatch:
@@ -60,7 +60,7 @@ jobs:
           trap 'rm -f "$GIT_ASKPASS"' EXIT
           git -c credential.helper= clone --depth 1 "https://github.com/$GITHUB_REPOSITORY.wiki.git" "$wiki_directory"
           source_revision="$(git rev-parse HEAD)"
-          python3 .github/wiki_sync.py --output "$wiki_directory" --repository "$GITHUB_REPOSITORY" --revision "$source_revision"
+          build/wiki-venv/bin/python .github/wiki_sync.py --output "$wiki_directory" --repository "$GITHUB_REPOSITORY" --revision "$source_revision"
           git -C "$wiki_directory" config user.name 'github-actions[bot]'
           git -C "$wiki_directory" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C "$wiki_directory" add --all

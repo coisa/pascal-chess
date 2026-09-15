@@ -26,7 +26,8 @@ Inspect actual check results at the final PR commit.
 ## Child DOX Index
 
 - `workflows/ci.yml`: shared Linux AMD64/ARM64 validation.
-- `dependabot.yml`: weekly Actions and Docker update PRs; no automatic merge.
+- `dependabot.yml`: weekly Actions, Docker and Python update PRs; no automatic merge.
+- `requirements.txt`: hash-pinned Markdown parser installed in `build/wiki-venv`.
 - `workflows/wiki.yml`: PR rendering and default-branch Wiki publication.
 - [wiki_sync.md](wiki_sync.md): renderer inputs, outputs, boundaries and checks.
 - `test_wiki_sync.py`: isolated rendering and managed-file boundary tests.

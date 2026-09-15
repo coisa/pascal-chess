@@ -40,7 +40,9 @@ changed. Tokens are supplied by a temporary askpass helper, never in the remote
 URL or logs. Missing setup fails with a specific message. A missing secret or
 failed job is not a successful deployment.
 
-Preview and tests require no credentials:
+Preview and tests require Python 3.9+ with `venv`, and no credentials. The first
+run downloads the hash-pinned Markdown parser into `build/wiki-venv`; subsequent
+runs reuse it until the requirements change. The renderer itself is offline:
 
 ```sh
 make wiki-check
@@ -51,5 +53,6 @@ correction so CI republishes it. To stop publication, disable the workflow or
 remove its trigger through a reviewed change. Wiki history preserves earlier
 commits; do not force-push or delete the Wiki as a routine repair.
 
-Dependabot independently opens weekly update PRs for GitHub Actions and Docker.
+Dependabot independently opens weekly update PRs for GitHub Actions, Docker
+and the Python Markdown parser.
 It does not merge or update the pinned APT snapshot automatically.

@@ -7,7 +7,8 @@ Tracks [issue #4](https://github.com/coisa/pascal-chess/issues/4).
 2. Validate on pull requests without credentials. Publish after a merge into
    the default branch, checking out its latest source and using a dedicated
    `WIKI_TOKEN`. Initialize the Wiki once before the first publication.
-3. Preserve the existing Dependabot configuration from the 1.0.0 release.
+3. Install the hash-pinned CommonMark parser in an isolated build environment.
+   Extend the existing weekly Dependabot configuration to cover Python updates.
 4. Test idempotence, links, assets, stale managed files, collisions and unsafe
    paths; inspect the actual GitHub run before claiming publication succeeded.
 

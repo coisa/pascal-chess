@@ -101,12 +101,48 @@ class WikiTests(unittest.TestCase):
     def test_rewrites_reference_definitions(self):
         (self.repo / 'docs/nested').mkdir()
         (self.repo / 'docs/nested/page.md').write_text('# Nested\n')
-        (self.repo / 'docs/a.md').write_text('# First\n[Page][page] ![Picture][image]\n[page]: nested/page.md#section "Title"\n[image]: <pic.png>\n[code]: ../README.md\n')
+        (self.repo / 'docs/a.md').write_text('# First\n[Page][page] ![Picture][image]\n\n[page]: nested/page.md#section "Title"\n[image]: <pic.png>\n[code]: ../README.md\n')
         self.render()
         result = (self.output / 'a.md').read_text()
         self.assertIn('[page]: https://github.com/owner/game/wiki/nested--page#section "Title"', result)
-        self.assertIn('[image]: https://raw.githubusercontent.com/wiki/owner/game/assets/pic.png', result)
+        self.assertIn('[image]: <https://raw.githubusercontent.com/wiki/owner/game/assets/pic.png>', result)
         self.assertIn(f'[code]: https://github.com/owner/game/blob/{SHA}/README.md', result)
+
+    def test_preserves_multiline_code_spans(self):
+        literal = '`literal\n[example](missing.md)\ntext`'
+        (self.repo / 'docs/a.md').write_text('# First\n\n' + literal + '\n\n[Actual](b.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn(literal, result)
+        self.assertIn('[Actual](https://github.com/owner/game/wiki/b)', result)
+
+    def test_nested_labels_and_linked_images(self):
+        (self.repo / 'docs/a.md').write_text('# First\n[outer [inner]](../README.md) [![Picture](pic.png)](b.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn(f'[outer [inner]](https://github.com/owner/game/blob/{SHA}/README.md)', result)
+        self.assertIn('[![Picture](https://raw.githubusercontent.com/wiki/owner/game/assets/pic.png)](https://github.com/owner/game/wiki/b)', result)
+
+    def test_multiline_reference_definition(self):
+        (self.repo / 'docs/a.md').write_text('# First\n[Page][page]\n\n[page]:\n  <b.md>\n  "Title"\n')
+        self.render()
+        self.assertIn('[page]:\n  <https://github.com/owner/game/wiki/b>\n  "Title"', (self.output / 'a.md').read_text())
+
+    def test_container_offsets_and_escaped_labels(self):
+        (self.repo / 'docs/a.md').write_text('# First\n\n> [Quoted](b.md)\n\n- Item\n  - [Nested](../README.md)\n\n\\[literal](missing.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('> [Quoted](https://github.com/owner/game/wiki/b)', result)
+        self.assertIn(f'  - [Nested](https://github.com/owner/game/blob/{SHA}/README.md)', result)
+        self.assertIn('\\[literal](missing.md)', result)
+
+    def test_reference_offsets_inside_containers(self):
+        (self.repo / 'docs/a.md').write_text('# First\n\n> Café [Page][page]\n>\n> [page]: b.md\n\n- [Code][code]\n\n  [code]: <../README.md>\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('> Café [Page][page]', result)
+        self.assertIn('> [page]: https://github.com/owner/game/wiki/b', result)
+        self.assertIn(f'  [code]: <https://github.com/owner/game/blob/{SHA}/README.md>', result)
 
     def test_uses_tree_urls_for_directories(self):
         (self.repo / 'src').mkdir()

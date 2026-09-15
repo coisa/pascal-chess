@@ -6,10 +6,24 @@ from pathlib import Path
 import re
 import shutil
 from urllib.parse import quote, unquote, urlsplit
+from html import unescape
+from marko import block, inline
+from marko.parser import Parser
 
 MANIFEST = '.docs-sync-manifest.json'
 ASSETS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.pdf'}
-LINK = re.compile(r'(!?\[[^\]\n]*\]\()(<[^>\n]+>|[^)\s]+)(\s+["\'][^)\n]*["\'])?\)')
+
+
+class SourceLinkRefDef(block.LinkRefDef):
+    """Retain Marko's parsed destination offsets for reference definitions."""
+    override = True
+
+    @classmethod
+    def parse(cls, source):
+        destination = source.context.linkref_info.link_dest
+        result = super().parse(source)
+        result.dest_span = (destination.start, destination.end)
+        return result
 
 
 def managed_name(name):
@@ -77,37 +91,40 @@ def render(repo, output, repository, revision):
         return url
 
     def markdown(path):
-        rendered, fence = [], ''
-        for line in path.read_text(encoding='utf-8').splitlines(keepends=True):
-            marker = re.match(r'^\s{0,3}(`{3,}|~{3,})', line)
-            if marker and not fence and marker[1][0] == '`' and '`' in line[marker.end():]:
-                marker = None  # Backtick fence info strings cannot contain backticks.
-            if marker:
-                token = marker.group(1)
-                if not fence:
-                    fence = token
-                elif token[0] == fence[0] and len(token) >= len(fence) and not line[marker.end():].strip():
-                    fence = ''
-                rendered.append(line)
-                continue
-            if fence or line.startswith(('    ', '\t')):
-                rendered.append(line)
-                continue
-            reference = re.match(r'^( {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*)(<[^>\n]+>|[^\s]+)(.*)$', line)
-            if reference:
-                rendered.append(reference[1] + target_url(path, reference[2]) + reference[3] + ('\n' if line.endswith('\n') else ''))
-                continue
-            def prose(text):
-                return LINK.sub(lambda match: match[1] + target_url(path, match[2]) + (match[3] or '') + ')', text)
-            # A closing delimiter must have exactly the opening backtick count.
-            chunks, cursor = [], 0
-            for span in re.finditer(r'(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)', line):
-                chunks.append(prose(line[cursor:span.start()]))
-                chunks.append(span[0])
-                cursor = span.end()
-            chunks.append(prose(line[cursor:]))
-            rendered.append(''.join(chunks))
-        return ''.join(rendered)
+        original = path.read_text(encoding='utf-8')
+        parser = Parser()
+        parser.add_element(SourceLinkRefDef)
+        document = parser.parse(original)
+        replacements = {}
+
+        def visit(node):
+            if isinstance(node, (inline.Link, inline.Image, block.LinkRefDef)):
+                span = getattr(node, 'dest_span', None)
+                value = unescape(inline.Literal.strip_backslash(node.dest.removeprefix('<').removesuffix('>')))
+                parsed = urlsplit(value)
+                # Reference uses have no destination span; their definition owns it.
+                if span is not None and parsed.path and not parsed.scheme and not parsed.netloc:
+                    start, end = span
+                    if not 0 <= start <= end <= len(original):
+                        raise ValueError('Invalid Markdown source span.')
+                    replacement = target_url(path, value)
+                    if original[start:end].startswith('<'):
+                        replacement = '<' + replacement + '>'
+                    replacements[span] = replacement
+            children = getattr(node, 'children', [])
+            if isinstance(children, list):
+                for child in children:
+                    visit(child)
+
+        visit(document)
+        # Replace only parsed destinations, preserving every other source character.
+        previous_start = len(original)
+        for (start, end), replacement in sorted(replacements.items(), reverse=True):
+            if end > previous_start:
+                raise ValueError('Overlapping Markdown destination spans.')
+            original = original[:start] + replacement + original[end:]
+            previous_start = start
+        return original
 
     planned = {target: markdown(path) for path, target in pages.items()}
     links = []
