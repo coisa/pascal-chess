@@ -144,6 +144,55 @@ class WikiTests(unittest.TestCase):
         self.assertIn('> [page]: https://github.com/owner/game/wiki/b', result)
         self.assertIn(f'  [code]: <https://github.com/owner/game/blob/{SHA}/README.md>', result)
 
+    def test_preserves_code_inside_containers_and_tab_indentation(self):
+        examples = ['> ```md\n> [quoted](missing.md)\n> ```\n',
+                    '- ```md\n  [listed](absent.md)\n  ```\n',
+                    ' \t[indented](missing.md)\n']
+        for literal in examples:
+            with self.subTest(literal=literal):
+                (self.repo / 'docs/a.md').write_text('# First\n\n' + literal)
+                self.render()
+                self.assertIn(literal, (self.output / 'a.md').read_text())
+
+    def test_heading_markup_cannot_replace_navigation_links(self):
+        (self.repo / 'docs/a.md').write_text('# API [reference](b.md) <a href="https://example.test">guide</a>\n')
+        self.render()
+        for page in ['Home.md', '_Sidebar.md']:
+            parsed = sync.Parser().parse((self.output / page).read_text())
+            links = []
+
+            def visit(node):
+                if isinstance(node, sync.inline.Link):
+                    links.append(node.dest)
+                children = getattr(node, 'children', [])
+                if isinstance(children, list):
+                    for child in children:
+                        visit(child)
+
+            visit(parsed)
+            self.assertEqual(links.count('https://github.com/owner/game/wiki/a'), 1)
+            self.assertNotIn('b.md', links)
+            self.assertNotIn('<a href=', (self.output / page).read_text())
+
+    def test_raw_urls_for_repository_images_outside_docs(self):
+        (self.repo / 'images').mkdir()
+        (self.repo / 'images/demo.png').write_bytes(b'image')
+        (self.repo / 'docs/a.md').write_text('# First\n![Demo](../images/demo.png)\n![Again][image]\n\n[image]: ../images/demo.png\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertEqual(result.count(f'https://raw.githubusercontent.com/owner/game/{SHA}/images/demo.png'), 2)
+
+    def test_file_ancestor_fails_before_modifying_managed_pages(self):
+        self.render()
+        (self.output / 'assets/screenshots').write_bytes(b'unmanaged-file')
+        before = {p.relative_to(self.output): p.read_bytes() for p in self.output.rglob('*') if p.is_file()}
+        (self.repo / 'docs/a.md').write_text('# Changed\n')
+        (self.repo / 'docs/screenshots').mkdir()
+        (self.repo / 'docs/screenshots/play.png').write_bytes(b'new-image')
+        with self.assertRaisesRegex(ValueError, 'ancestor is not a directory'):
+            self.render()
+        self.assertEqual(before, {p.relative_to(self.output): p.read_bytes() for p in self.output.rglob('*') if p.is_file()})
+
     def test_uses_tree_urls_for_directories(self):
         (self.repo / 'src').mkdir()
         (self.repo / 'docs/a.md').write_text('# First\n[Sources](../src/)\n')

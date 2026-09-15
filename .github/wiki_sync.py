@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import string
 from urllib.parse import quote, unquote, urlsplit
 from html import unescape
 from marko import block, inline
@@ -82,8 +83,12 @@ def render(repo, output, repository, revision):
         else:
             if not target.exists():
                 raise ValueError(f'Broken repository link: {source_page.name}: {value}')
-            view = 'tree' if target.is_dir() else 'blob'
-            url = f'https://github.com/{repository}/{view}/{revision}/{quote(target.relative_to(repo).as_posix())}'
+            repository_path = quote(target.relative_to(repo).as_posix())
+            if target.is_file() and target.suffix.lower() in ASSETS:
+                url = f'https://raw.githubusercontent.com/{repository}/{revision}/{repository_path}'
+            else:
+                view = 'tree' if target.is_dir() else 'blob'
+                url = f'https://github.com/{repository}/{view}/{revision}/{repository_path}'
         if parsed.query:
             url += '?' + parsed.query
         if parsed.fragment:
@@ -130,6 +135,8 @@ def render(repo, output, repository, revision):
     links = []
     for path, target in pages.items():
         title = next((line[2:].strip() for line in path.read_text(encoding='utf-8').splitlines() if line.startswith('# ')), path.stem)
+        # A heading can itself contain links or HTML; navigation labels are literal.
+        title = ''.join('\\' + char if char in string.punctuation else char for char in title)
         links.append(f'- [{title}](https://github.com/{repository}/wiki/{quote(target[:-3])})')
     index = '\n'.join(links) + '\n'
     planned['Home.md'] = (f'# {repository.split("/")[1]} documentation\n\n'
@@ -158,6 +165,9 @@ def render(repo, output, repository, revision):
                           for depth in range(1, len(parts) + 1))
         if not managed_name(name) or output not in target.resolve().parents or has_symlink:
             raise ValueError(f'Unsafe Wiki destination: {name}')
+        if any(ancestor.exists() and not ancestor.is_dir()
+               for ancestor in (output.joinpath(*parts[:depth]) for depth in range(1, len(parts)))):
+            raise ValueError(f'Wiki destination ancestor is not a directory: {name}')
         if target.exists() and not target.is_file():
             raise ValueError(f'Wiki destination is not a file: {name}')
         if target.exists() and name not in previous and name != 'Home.md':
