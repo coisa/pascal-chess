@@ -144,6 +144,17 @@ class WikiTests(unittest.TestCase):
         self.assertIn('> [page]: https://github.com/owner/game/wiki/b', result)
         self.assertIn(f'  [code]: <https://github.com/owner/game/blob/{SHA}/README.md>', result)
 
+    def test_multiline_reference_destinations_inside_quotes(self):
+        examples = ['> [Page][page]\n>\n> [page]:\n>   b.md\n>   "title"\n',
+                    '> - [Page][page]\n>\n>   [page]:\n>     b.md\n>     "title"\n',
+                    '> > [Page][page]\n> >\n> > [page]:\n> >   <b.md>\n']
+        for example in examples:
+            with self.subTest(example=example):
+                (self.repo / 'docs/a.md').write_text('# First\n\n' + example)
+                self.render()
+                self.assertEqual('# First\n\n' + example.replace('b.md', 'https://github.com/owner/game/wiki/b'),
+                                 (self.output / 'a.md').read_text())
+
     def test_preserves_code_inside_containers_and_tab_indentation(self):
         examples = ['> ```md\n> [quoted](missing.md)\n> ```\n',
                     '- ```md\n  [listed](absent.md)\n  ```\n',

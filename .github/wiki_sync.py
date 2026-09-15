@@ -10,6 +10,7 @@ from urllib.parse import quote, unquote, urlsplit
 from html import unescape
 from marko import block, inline
 from marko.parser import Parser
+from marko.source import Source
 
 MANIFEST = '.docs-sync-manifest.json'
 ASSETS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.pdf'}
@@ -18,6 +19,28 @@ ASSETS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.pdf'}
 class SourceLinkRefDef(block.LinkRefDef):
     """Retain Marko's parsed destination offsets for reference definitions."""
     override = True
+
+    @classmethod
+    def match(cls, source):
+        if super().match(source):
+            return True
+        if not source.prefix or not source.expect_re(cls.pattern):
+            return False
+        # Marko's reference matcher reads the raw buffer across line breaks.
+        # Mask container prefixes in a temporary view; equal-length padding
+        # keeps every destination offset relative to the original document.
+        chunks = [source._buffer[:source.pos]]
+        for line in source._buffer[source.pos:].splitlines(keepends=True):
+            prefix_length = source.match_prefix(source.prefix, line)
+            if prefix_length < 0:
+                break
+            chunks.append(' ' * prefix_length + line[prefix_length:])
+        shadow = Source(''.join(chunks))
+        shadow.pos = source._current_pos
+        if not super().match(shadow):
+            return False
+        source.context.linkref_info = shadow.context.linkref_info
+        return True
 
     @classmethod
     def parse(cls, source):

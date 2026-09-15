@@ -12,6 +12,8 @@ The Makefile creates `build/wiki-venv` and installs the hash-pinned
 [Marko parser](https://github.com/frostming/marko) from `requirements.txt`.
 Only this dependency setup needs network access. Dependabot proposes updates;
 the parser's destination-offset contract is covered by the rendering tests.
+The small reference-definition adapter also masks container prefixes when
+matching continued destinations, retaining the original character offsets.
 
 The renderer writes the chosen output, an index/sidebar and a managed-file
 manifest. It parses CommonMark and replaces only local link destinations at
