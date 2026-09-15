@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add docs-to-Wiki publication after default-branch merges, with credential-free
+  PR rendering, source links, assets and managed-file cleanup.
+
 ## [1.0.0] - 2026-09-15
 
 ### Added

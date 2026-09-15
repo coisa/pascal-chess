@@ -10,6 +10,8 @@ desktop game. Application logic, chess rules, search and rule tests stay Pascal.
 The owner authorized modernization, English translation, unarchiving, an issue
 and PR, a 0.1.0 baseline release, merge and a 1.0.0 release. Wiki synchronization
 belongs in a separate PR. No license or external service credentials are implied.
+The Wiki publisher uses only a dedicated configured secret; never repurpose a
+developer token. PR validation remains credential-free.
 
 ## Local Contracts
 

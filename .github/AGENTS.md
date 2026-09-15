@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Validate pull requests and master with reproducible Linux builds.
+Validate pull requests and master with reproducible Linux builds; publish docs
+to the initialized Wiki from the default branch.
 
 ## Ownership
 
@@ -11,7 +12,8 @@ The root contract owns merge and publication. Tests do not need secrets.
 ## Local Contracts
 
 Pin external actions by SHA. Use read-only permissions, standard runners and
-bounded jobs. Wiki publication will be introduced in its own reviewed PR.
+bounded jobs. Wiki publication uses a dedicated secret only on default-branch
+runs. Pull requests test and render documentation without credentials.
 
 ## Work Guidance
 
@@ -25,3 +27,6 @@ Inspect actual check results at the final PR commit.
 
 - `workflows/ci.yml`: shared Linux AMD64/ARM64 validation.
 - `dependabot.yml`: weekly Actions and Docker update PRs; no automatic merge.
+- `workflows/wiki.yml`: PR rendering and default-branch Wiki publication.
+- [wiki_sync.md](wiki_sync.md): renderer inputs, outputs, boundaries and checks.
+- `test_wiki_sync.py`: isolated rendering and managed-file boundary tests.
