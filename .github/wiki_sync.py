@@ -124,8 +124,13 @@ def render(repo, output, repository, revision):
     # Validate all destinations before changing anything; preserve unrelated Wiki pages.
     for name in set(names + previous):
         target = output / name
-        if not managed_name(name) or output not in target.resolve().parents or target.is_symlink():
+        parts = Path(name).parts
+        has_symlink = any(output.joinpath(*parts[:depth]).is_symlink()
+                          for depth in range(1, len(parts) + 1))
+        if not managed_name(name) or output not in target.resolve().parents or has_symlink:
             raise ValueError(f'Unsafe Wiki destination: {name}')
+        if target.exists() and not target.is_file():
+            raise ValueError(f'Wiki destination is not a file: {name}')
         if target.exists() and name not in previous and name not in {'Home.md', '_Sidebar.md'}:
             raise ValueError(f'Unmanaged Wiki page would be overwritten: {name}')
     for name in set(previous) - set(names):

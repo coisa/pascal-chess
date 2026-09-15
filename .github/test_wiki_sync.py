@@ -77,6 +77,22 @@ class WikiTests(unittest.TestCase):
     def test_refuses_output_over_source(self):
         with self.assertRaises(ValueError): sync.render(self.repo, self.repo / 'docs', 'owner/game', SHA)
 
+    def test_refuses_symlink_ancestors_before_write_or_stale_delete(self):
+        self.render()
+        (self.output / 'assets').rename(self.output / 'manual-assets')
+        (self.output / 'assets').symlink_to(self.output / 'manual-assets', target_is_directory=True)
+        manual = self.output / 'manual-assets/pic.png'
+        manual.write_bytes(b'unmanaged-original')
+        manifest = (self.output / sync.MANIFEST).read_bytes()
+        with self.assertRaises(ValueError): self.render()
+        self.assertEqual(manual.read_bytes(), b'unmanaged-original')
+        self.assertEqual((self.output / sync.MANIFEST).read_bytes(), manifest)
+        (self.repo / 'docs/pic.png').unlink()
+        (self.repo / 'docs/a.md').write_text('# First\n')
+        with self.assertRaises(ValueError): self.render()
+        self.assertEqual(manual.read_bytes(), b'unmanaged-original')
+        self.assertEqual((self.output / sync.MANIFEST).read_bytes(), manifest)
+
 
 if __name__ == '__main__':
     unittest.main()
