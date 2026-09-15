@@ -80,6 +80,8 @@ def render(repo, output, repository, revision):
         rendered, fence = [], ''
         for line in path.read_text(encoding='utf-8').splitlines(keepends=True):
             marker = re.match(r'^\s{0,3}(`{3,}|~{3,})', line)
+            if marker and not fence and marker[1][0] == '`' and '`' in line[marker.end():]:
+                marker = None  # Backtick fence info strings cannot contain backticks.
             if marker:
                 token = marker.group(1)
                 if not fence:

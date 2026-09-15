@@ -2,7 +2,7 @@ name: Documentation Wiki
 
 on:
   pull_request:
-    paths: ['docs/**', '.github/wiki_sync.py', '.github/test_wiki_sync.py', '.github/workflows/wiki.yml']
+    paths: ['docs/**', 'Makefile', '.github/wiki_sync.py', '.github/test_wiki_sync.py', '.github/workflows/wiki.yml']
   push:
     branches: [master, main]
   workflow_dispatch:

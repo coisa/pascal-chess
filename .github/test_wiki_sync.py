@@ -91,6 +91,13 @@ class WikiTests(unittest.TestCase):
         self.render()
         self.assertIn(literal, (self.output / 'a.md').read_text())
 
+    def test_whole_line_code_span_does_not_open_a_fence(self):
+        (self.repo / 'docs/a.md').write_text('# First\n\n```[literal](missing.md)```\n\n[Actual](b.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('```[literal](missing.md)```', result)
+        self.assertIn('[Actual](https://github.com/owner/game/wiki/b)', result)
+
     def test_rewrites_reference_definitions(self):
         (self.repo / 'docs/nested').mkdir()
         (self.repo / 'docs/nested/page.md').write_text('# Nested\n')
