@@ -1,0 +1,10 @@
+**
+!Dockerfile
+!Makefile
+!chess.pas
+!ChessCLI.pas
+!src/
+!src/*.pas
+!tests/
+!tests/*.pas
+!tests/*.py
