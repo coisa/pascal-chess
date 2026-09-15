@@ -201,6 +201,25 @@ class WikiTests(unittest.TestCase):
             self.assertNotIn('b.md', links)
             self.assertNotIn('<a href=', (self.output / page).read_text())
 
+    def test_navigation_uses_parsed_h1_and_ignores_literal_headings(self):
+        examples = ['```md\n# Literal code title\n```\n\n# Actual title\n',
+                    '<!--\n# Literal comment title\n-->\n\nActual title\n============\n']
+        for example in examples:
+            with self.subTest(example=example):
+                (self.repo / 'docs/a.md').write_text(example)
+                self.render()
+                for page in ['Home.md', '_Sidebar.md']:
+                    result = (self.output / page).read_text()
+                    self.assertIn('[Actual title](https://github.com/owner/game/wiki/a)', result)
+                    self.assertNotIn('Literal', result)
+
+    def test_url_suffixes_preserve_escaped_markdown_delimiters(self):
+        (self.repo / 'docs/a.md').write_text('# First\n[x](b.md#part\\)) [y](<b.md?q=\\>&x=1#part\\>>)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('[x](https://github.com/owner/game/wiki/b#part%29)', result)
+        self.assertIn('[y](<https://github.com/owner/game/wiki/b?q=%3E&x=1#part%3E>)', result)
+
     def test_raw_urls_for_repository_images_outside_docs(self):
         (self.repo / 'images').mkdir()
         (self.repo / 'images/demo.png').write_bytes(b'image')

@@ -109,7 +109,6 @@ def render(repo, output, repository, revision):
     committed_paths = revision_paths(repo, revision)
 
     def target_url(source_page, value):
-        value = value.removeprefix('<').removesuffix('>')
         parsed = urlsplit(value)
         if parsed.scheme or parsed.netloc or not parsed.path or parsed.path.startswith('/'):
             return value
@@ -131,11 +130,24 @@ def render(repo, output, repository, revision):
             else:
                 view = 'tree' if target.is_dir() else 'blob'
                 url = f'https://github.com/{repository}/{view}/{revision}/{repository_path}'
+        # Keep URI separators, but encode characters that terminate Markdown
+        # destinations after escape/entity decoding (notably parentheses and >).
+        suffix_safe = '!$&*+,-./:;=?@_%~'
         if parsed.query:
-            url += '?' + parsed.query
+            url += '?' + quote(parsed.query, safe=suffix_safe)
         if parsed.fragment:
-            url += '#' + parsed.fragment
+            url += '#' + quote(parsed.fragment, safe=suffix_safe)
         return url
+
+    titles = {}
+
+    def heading_text(node):
+        if isinstance(node, inline.InlineHTML):
+            return ''
+        children = getattr(node, 'children', [])
+        if isinstance(children, str):
+            return children if isinstance(node, inline.CodeSpan) else unescape(children)
+        return ''.join(heading_text(child) for child in children)
 
     def markdown(path):
         original = path.read_text(encoding='utf-8')
@@ -145,9 +157,14 @@ def render(repo, output, repository, revision):
         replacements = {}
 
         def visit(node):
+            if isinstance(node, (block.Heading, block.SetextHeading)) and node.level == 1 and path not in titles:
+                titles[path] = ' '.join(heading_text(node).split())
             if isinstance(node, (inline.Link, inline.Image, block.LinkRefDef)):
                 span = getattr(node, 'dest_span', None)
-                value = unescape(inline.Literal.strip_backslash(node.dest.removeprefix('<').removesuffix('>')))
+                destination = node.dest
+                if destination.startswith('<') and destination.endswith('>'):
+                    destination = destination[1:-1]
+                value = unescape(inline.Literal.strip_backslash(destination))
                 parsed = urlsplit(value)
                 # Reference uses have no destination span; their definition owns it.
                 if (span is not None and parsed.path and not parsed.path.startswith('/')
@@ -177,7 +194,7 @@ def render(repo, output, repository, revision):
     planned = {target: markdown(path) for path, target in pages.items()}
     links = []
     for path, target in pages.items():
-        title = next((line[2:].strip() for line in path.read_text(encoding='utf-8').splitlines() if line.startswith('# ')), path.stem)
+        title = titles.get(path, path.stem)
         # A heading can itself contain links or HTML; navigation labels are literal.
         title = ''.join('\\' + char if char in string.punctuation else char for char in title)
         links.append(f'- [{title}](https://github.com/{repository}/wiki/{quote(target[:-3])})')

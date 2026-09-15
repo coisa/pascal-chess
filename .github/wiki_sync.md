@@ -24,7 +24,10 @@ tree URLs; repository images outside `docs/` use revision-pinned raw URLs.
 Repository link targets must exist in the specified Git commit; ignored,
 untracked or later-added paths fail validation. Root-relative GitHub URLs stay
 unchanged. Every pull request is checked because any file can be a link target.
-Navigation labels escape heading markup so each entry links to its Wiki page.
+Navigation labels use the parsed first level-one heading, including setext
+headings, and escape its plain text. Literal headings in code or HTML comments
+are ignored. Rewritten URL suffixes encode Markdown delimiters without changing
+query separators or existing percent escapes.
 Only the initial Home page is an allowed
 unmanaged bootstrap; an existing unmanaged sidebar requires explicit migration.
 It performs no network, commit or push. It rejects missing sources,
