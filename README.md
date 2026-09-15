@@ -25,7 +25,7 @@ make local-play
 On Debian/Ubuntu:
 
 ```sh
-sudo apt install fp-compiler make libsdl2-2.0-0 libsdl2-ttf-2.0-0 fonts-dejavu-core python3
+sudo apt install fp-compiler make gcc libc6-dev libsdl2-2.0-0 libsdl2-ttf-2.0-0 fonts-dejavu-core python3
 make local-play
 ```
 
