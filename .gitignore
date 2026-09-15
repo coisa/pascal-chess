@@ -1,0 +1,5 @@
+build/
+tmp/
+*.o
+*.ppu
+.DS_Store
