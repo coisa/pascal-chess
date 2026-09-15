@@ -39,3 +39,5 @@ checks and review findings at the final commit before merging.
 - [docs/AGENTS.md](docs/AGENTS.md): provenance, architecture, challenge and evidence.
 - [plans/AGENTS.md](plans/AGENTS.md): canonical modernization recipe.
 - [.github/AGENTS.md](.github/AGENTS.md): bounded, read-only CI validation.
+- [README.md](README.md): play, build, controls and the experiment.
+- [CHANGELOG.md](CHANGELOG.md): observable release history.

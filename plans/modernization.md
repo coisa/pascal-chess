@@ -1,5 +1,7 @@
 # Pascal Chess modernization
 
+Implementation recipe for [issue #1](https://github.com/coisa/pascal-chess/issues/1).
+
 ## Outcome and authority
 
 The owner asked for the same ambitious modernization and delivery flow as
@@ -14,7 +16,7 @@ Original scope: one `chess.pas`, no repository instructions or documentation.
 Create a root contract for authority, language, offline behavior and validation.
 Create `src/` for pure rule/search and SDL resource boundaries, `tests/` for
 disposable synthetic fixtures, `docs/` for evidence/provenance, `plans/` for
-the recipe and `.github/` for CI permissions. Each parent indexes only its
+   the recipe and `.github/` for CI permissions. Each parent indexes only its
 direct durable children. Read root then the applicable child before editing.
 Generated `build/` and `tmp/` need no contracts. Rollback restores these
 contracts and consumers together through Git.

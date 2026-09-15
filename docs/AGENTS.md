@@ -24,4 +24,8 @@ Check paths and inspect actual rendered previews after visual changes.
 
 ## Child DOX Index
 
-No child instruction boundaries.
+- [baseline.md](baseline.md): original source and verified provenance.
+- [architecture.md](architecture.md): engine, search and native platform design.
+- [try-your-project.md](try-your-project.md): reusable prompt and evaluation.
+- [validation.md](validation.md): executed coverage and limits.
+- `preview.png`: staged capture from the real renderer.

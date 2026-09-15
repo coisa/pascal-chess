@@ -23,4 +23,5 @@ Inspect actual check results at the final PR commit.
 
 ## Child DOX Index
 
-No child instruction boundaries.
+- `workflows/ci.yml`: shared Linux AMD64/ARM64 validation.
+- `dependabot.yml`: weekly Actions and Docker update PRs; no automatic merge.

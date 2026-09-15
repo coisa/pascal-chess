@@ -365,8 +365,21 @@ begin
   end;
 end;
 
+function JournalFirstNumber: Integer;
+begin
+  Result := A.Game.Positions[0].Fullmove;
+  if A.Game.Count > 0 then
+    Result := Max(Result,A.Game.Positions[A.Game.Count-1].Fullmove-5);
+end;
+
+procedure JournalCell(Index: Integer; out Row,Column: Integer);
+begin
+  Row := A.Game.Positions[Index].Fullmove-JournalFirstNumber;
+  Column := 0; if A.Game.Positions[Index].Turn = BlackSide then Column := 1;
+end;
+
 procedure Draw;
-var I,J,First,Row,Material: Integer; LabelText, Detail: String; Color: LongWord;
+var I,J,First,Row,MoveRow,Material: Integer; LabelText, Detail: String; Color: LongWord;
 begin
   SetColor(Ink); SDL_RenderClear(A.Renderer);
   Rounded(48,35,52,52,12,Gold); Piece(55,38,38,-Rook);
@@ -401,7 +414,7 @@ begin
   Text(780,386,'MOVE JOURNAL',0,Gold);
   Button(1074,378,122,28,'Copy PGN / P',False,not A.Busy,0);
   Rect(780,416,416,1,Edge);
-  First := Max(0,A.Game.Count-12); First := First - First mod 2;
+  First := JournalFirstNumber;
   if A.Game.Count = 0 then
   begin
     Piece(958,440,64,King);
@@ -411,14 +424,15 @@ begin
   else
     for Row := 0 to 5 do
     begin
-      I := First+Row*2; if I >= A.Game.Count then Break;
+      if First+Row > A.Game.Positions[A.Game.Count-1].Fullmove then Break;
       if Row mod 2 = 0 then Rounded(780,427+Row*34,416,32,5,$202B35);
-      Text(794,434+Row*34,IntToStr(A.Game.Positions[I].Fullmove)+'.',1,Muted);
-      for J := 0 to 1 do
-        if I+J < A.Game.Count then
+      Text(794,434+Row*34,IntToStr(First+Row)+'.',1,Muted);
+      for I := 0 to A.Game.Count-1 do
+        if A.Game.Positions[I].Fullmove = First+Row then
         begin
-          Color := White; if I+J = A.Game.Count-1 then Color := Gold;
-          Text(852+J*156,434+Row*34,A.Game.Notation[I+J],1,Color);
+          JournalCell(I,MoveRow,J);
+          Color := White; if I = A.Game.Count-1 then Color := Gold;
+          Text(852+J*156,434+MoveRow*34,A.Game.Notation[I],1,Color);
         end;
     end;
   Material := 0;
@@ -487,6 +501,7 @@ begin
   StartGame(A.Game,A.Initial); A.Selected := -1; A.Cursor := 12;
   A.HintValid := False; A.PendingPromotion := False; A.NewDialog := False;
   A.FocusPaused := False; A.Animation := 0; A.ToastLife := 0;
+  A.HintRequested := False;
   A.LastDepth := 0; A.LastNodes := 0; A.Flipped := A.HumanSide = BlackSide;
 end;
 
@@ -837,12 +852,15 @@ begin
 end;
 
 procedure SelfTest;
-var P: TPosition; Error: String; E: TEvent; Before: String; I: Integer; Clipboard: PChar;
+const JournalMoves: array[0..4] of String = ('b1c3','f8e7','d2d3','b7b5','a4b3');
+var P: TPosition; Error: String; E: TEvent; Before: String; I,Row,Column: Integer;
+  Clipboard: PChar; M: TMove; InitialMuted,InitialMotion: Boolean;
 begin
   Events; A.FocusPaused := False; A.HumanSide := 0; ResetGame;
+  InitialMuted := A.Muted; InitialMotion := A.ReducedMotion;
   PushClick(424,676); Require(A.Selected = 12,'pointer selects e2');
   PushClick(424,516); Require((A.Game.Count = 1) and (A.Game.Position.Board[28] = Pawn),'pointer plays e4');
-  Require(A.Animation > 0,'move animates'); A.Animation := 0;
+  Require((A.Animation > 0) = not InitialMotion,'animation respects initial motion'); A.Animation := 0;
   A.Cursor := 52; PushKey(13); PushKey(KeyDown); PushKey(KeyDown); PushKey(13);
   Require(A.Game.Count = 2,'keyboard plays e5');
   { Dummy driver uses an isolated clipboard; never replace a native user's clipboard in tests. }
@@ -857,9 +875,9 @@ begin
   end;
   PushKey(Ord('u')); Require(A.Game.Count = 1,'undo');
   PushKey(Ord('f')); Require(A.Flipped,'flip');
-  PushKey(Ord('m')); Require(A.Muted,'mute');
+  PushKey(Ord('m')); Require(A.Muted <> InitialMuted,'mute toggles');
   Require((A.Audio = 0) or (SDL_GetQueuedAudioSize(A.Audio) = 0),'mute clears queue');
-  PushKey(Ord('v')); Require(A.ReducedMotion and (A.Animation = 0),'reduced motion');
+  PushKey(Ord('v')); Require((A.ReducedMotion <> InitialMotion) and (A.Animation = 0),'reduced motion toggles');
   PushKey(Ord('3')); Require(A.Skill = 2,'search pace');
   PushKey(Ord('n')); Require(A.NewDialog,'new game confirmation');
   PushKey(27); Require(A.Game.Count = 1,'cancel keeps game');
@@ -881,6 +899,18 @@ begin
     Require(A.PendingPromotion,'promotion dialog');
     Promote(I); Require(A.Game.Position.Board[56] = I,'chosen promotion');
   end;
+  SetScene('play');
+  for I := 0 to High(JournalMoves) do
+  begin
+    Require(FindMove(A.Game.Position,JournalMoves[I],M),'journal move'); CommitMove(M);
+  end;
+  JournalCell(12,Row,Column);
+  Require((A.Game.Count = 13) and (Row = 5) and (Column = 0),'newest odd ply remains visible');
+  Require(LoadFEN('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 7',P,Error),'black-first FEN');
+  StartGame(A.Game,P); Require(FindMove(P,'e7e5',M),'black-first move'); CommitMove(M);
+  JournalCell(0,Row,Column); Require((Row = 0) and (Column = 1),'black-first journal column');
+  Require(FindMove(A.Game.Position,'g1f3',M),'white response'); CommitMove(M);
+  JournalCell(1,Row,Column); Require((Row = 1) and (Column = 0),'new move number in journal');
   SetScene('mate'); Require(A.Game.Outcome = ocWhiteWins,'checkmate state');
   Before := SaveFEN(A.Game.Position); SelectSquare(0); Update(1);
   Require(SaveFEN(A.Game.Position) = Before,'finished state frozen');

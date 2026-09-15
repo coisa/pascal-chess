@@ -47,6 +47,8 @@ print('ok - CLI options, perft, search, interaction, EOF and PGN exports')
 headless = {'SDL_VIDEODRIVER': 'dummy', 'SDL_AUDIODRIVER': 'dummy'}
 for _ in range(3):
     assert 'PASS SDL replay' in run(DESKTOP, '--self-test', env=headless)
+for options in [('--no-audio',), ('--reduced-motion',), ('--no-audio', '--reduced-motion')]:
+    assert 'PASS SDL replay' in run(DESKTOP, '--self-test', *options, env=headless)
 assert 'PASS SDL replay' in run(DESKTOP, '--self-test', env=headless | {'SDL_AUDIODRIVER': 'unavailable'})
 with tempfile.TemporaryDirectory(prefix='pascal-chess-frames-') as scratch:
     hashes = set()
