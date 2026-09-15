@@ -22,12 +22,13 @@ class SourceLinkRefDef(block.LinkRefDef):
 
     @classmethod
     def match(cls, source):
-        if super().match(source):
-            return True
-        if not source.prefix or not source.expect_re(cls.pattern):
+        if not source.prefix:
+            return super().match(source)
+        if not source.expect_re(cls.pattern):
             return False
         # Marko's reference matcher reads the raw buffer across line breaks.
-        # Mask container prefixes in a temporary view; equal-length padding
+        # Match container definitions in a temporary view, including titles
+        # continued after a same-line destination. Equal-length padding
         # keeps every destination offset relative to the original document.
         chunks = [source._buffer[:source.pos]]
         for line in source._buffer[source.pos:].splitlines(keepends=True):

@@ -155,6 +155,13 @@ class WikiTests(unittest.TestCase):
                 self.assertEqual('# First\n\n' + example.replace('b.md', 'https://github.com/owner/game/wiki/b'),
                                  (self.output / 'a.md').read_text())
 
+    def test_continued_reference_titles_inside_quotes_remain_literal(self):
+        example = '> [Page][page]\n>\n> [page]: b.md\n>   "Title [literal](missing.md)"\n'
+        (self.repo / 'docs/a.md').write_text('# First\n\n' + example)
+        self.render()
+        self.assertEqual('# First\n\n' + example.replace('b.md', 'https://github.com/owner/game/wiki/b'),
+                         (self.output / 'a.md').read_text())
+
     def test_preserves_code_inside_containers_and_tab_indentation(self):
         examples = ['> ```md\n> [quoted](missing.md)\n> ```\n',
                     '- ```md\n  [listed](absent.md)\n  ```\n',
