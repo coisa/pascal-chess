@@ -2,10 +2,12 @@
 """Render tracked docs into a Wiki checkout; performs no network or Git writes."""
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import shutil
 import string
+import subprocess
 from urllib.parse import quote, unquote, urlsplit
 from html import unescape
 from marko import block, inline
@@ -14,6 +16,19 @@ from marko.source import Source
 
 MANIFEST = '.docs-sync-manifest.json'
 ASSETS = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.pdf'}
+
+
+def revision_paths(repo, revision):
+    """Read files and directories from the exact commit without lazy fetching."""
+    try:
+        result = subprocess.run(
+            ['git', '-C', str(repo), 'ls-tree', '-r', '-t', '--name-only', '-z', revision],
+            check=True, capture_output=True,
+            env={**os.environ, 'GIT_NO_LAZY_FETCH': '1'},
+        )
+    except (OSError, subprocess.CalledProcessError) as exception:
+        raise ValueError(f'Cannot read source revision {revision} from Git.') from exception
+    return {'.', *result.stdout.decode('utf-8', errors='surrogateescape').rstrip('\0').split('\0')}
 
 
 class SourceLinkRefDef(block.LinkRefDef):
@@ -91,11 +106,12 @@ def render(repo, output, repository, revision):
             raise ValueError(f'Unsupported documentation asset: {relative}')
     if not pages:
         raise ValueError('No Markdown documentation to publish.')
+    committed_paths = revision_paths(repo, revision)
 
     def target_url(source_page, value):
         value = value.removeprefix('<').removesuffix('>')
         parsed = urlsplit(value)
-        if parsed.scheme or parsed.netloc or not parsed.path:
+        if parsed.scheme or parsed.netloc or not parsed.path or parsed.path.startswith('/'):
             return value
         target = (source_page.parent / unquote(parsed.path)).resolve()
         if target != repo and repo not in target.parents:
@@ -108,6 +124,8 @@ def render(repo, output, repository, revision):
             if not target.exists():
                 raise ValueError(f'Broken repository link: {source_page.name}: {value}')
             repository_path = quote(target.relative_to(repo).as_posix())
+            if target.relative_to(repo).as_posix() not in committed_paths:
+                raise ValueError(f'Repository link is absent from source revision: {value}')
             if target.is_file() and target.suffix.lower() in ASSETS:
                 url = f'https://raw.githubusercontent.com/{repository}/{revision}/{repository_path}'
             else:
@@ -132,7 +150,8 @@ def render(repo, output, repository, revision):
                 value = unescape(inline.Literal.strip_backslash(node.dest.removeprefix('<').removesuffix('>')))
                 parsed = urlsplit(value)
                 # Reference uses have no destination span; their definition owns it.
-                if span is not None and parsed.path and not parsed.scheme and not parsed.netloc:
+                if (span is not None and parsed.path and not parsed.path.startswith('/')
+                        and not parsed.scheme and not parsed.netloc):
                     start, end = span
                     if not 0 <= start <= end <= len(original):
                         raise ValueError('Invalid Markdown source span.')

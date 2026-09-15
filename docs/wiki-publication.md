@@ -8,6 +8,9 @@ reconcile it again. PR runs have no Wiki credential and never publish.
 The Wiki is generated: edit `docs/` and submit a PR instead of editing its
 managed pages. Markdown links between docs become Wiki links; assets are
 copied beneath `assets/`; links to source files point to the exact source SHA.
+Targets outside `docs/` must exist in the source commit, not just in the working
+tree. Root-relative GitHub links are preserved. All PRs run validation so deleting
+or renaming a linked repository file is checked before merge.
 Home and the sidebar are generated indexes. The initial Home bootstrap may be
 replaced; an existing unmanaged sidebar must be migrated explicitly. The manifest removes only stale
 previously managed files and leaves unrelated Wiki pages intact. Name clashes
@@ -40,7 +43,7 @@ changed. Tokens are supplied by a temporary askpass helper, never in the remote
 URL or logs. Missing setup fails with a specific message. A missing secret or
 failed job is not a successful deployment.
 
-Preview and tests require Python 3.9+ with `venv`, and no credentials. The first
+Preview and tests require Git, Python 3.9+ with `venv`, and no credentials. The first
 run downloads the hash-pinned Markdown parser into `build/wiki-venv`; subsequent
 runs reuse it until the requirements change. The renderer itself is offline:
 

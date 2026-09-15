@@ -2,9 +2,11 @@
 """Test documentation transformation and managed-file boundaries without network."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 MODULE = Path(__file__).with_name('wiki_sync.py')
 spec = importlib.util.spec_from_file_location('wiki_sync', MODULE)
@@ -25,6 +27,13 @@ class WikiTests(unittest.TestCase):
         (self.repo / 'docs/a.md').write_text('# First\n[Second](b.md#part) [Build](../README.md)\n![Image](pic.png)\n`[literal](missing.md)`\n```md\n[example](missing.md)\n```\n')
         (self.repo / 'docs/b.md').write_text('# Second\n## Part\n')
         (self.repo / 'docs/pic.png').write_bytes(b'synthetic-image')
+        # Parser/filesystem cases use a synthetic revision inventory. The Git
+        # integration test below exercises the real revision reader separately.
+        self.revision_inventory = patch.object(sync, 'revision_paths', side_effect=lambda repo, revision: {
+            '.', *(p.relative_to(repo).as_posix() for p in Path(repo).rglob('*')),
+        })
+        self.revision_inventory.start()
+        self.addCleanup(self.revision_inventory.stop)
 
     def tearDown(self):
         self.temp.cleanup()
@@ -216,6 +225,48 @@ class WikiTests(unittest.TestCase):
         (self.repo / 'docs/a.md').write_text('# First\n[Sources](../src/)\n')
         self.render()
         self.assertIn(f'/tree/{SHA}/src)', (self.output / 'a.md').read_text())
+
+    def test_preserves_root_relative_github_links(self):
+        content = '# First\n[Issues](/owner/game/issues)\n![Badge](/owner/game/actions/badge.svg)\n[Reference][root]\n\n[root]: /owner/game/pulls\n'
+        (self.repo / 'docs/a.md').write_text(content)
+        self.render()
+        self.assertEqual(content, (self.output / 'a.md').read_text())
+
+    def test_git_revision_rejects_ignored_untracked_and_later_targets(self):
+        self.revision_inventory.stop()
+        environment = dict(os.environ)
+        for key in ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY',
+                    'GIT_ALTERNATE_OBJECT_DIRECTORIES']:
+            environment.pop(key, None)
+        environment.update(GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull,
+                           GIT_AUTHOR_NAME='Wiki test', GIT_COMMITTER_NAME='Wiki test',
+                           GIT_AUTHOR_EMAIL='wiki@example.invalid', GIT_COMMITTER_EMAIL='wiki@example.invalid')
+
+        def git(*arguments):
+            return sync.subprocess.run(['git', '-c', 'commit.gpgsign=false', '-c',
+                                        'core.hooksPath=' + os.devnull, *arguments],
+                                       cwd=self.repo, env=environment, check=True,
+                                       capture_output=True, text=True).stdout.strip()
+
+        git('init', '--quiet')
+        (self.repo / '.gitignore').write_text('/build/\n')
+        git('add', 'docs', 'README.md', '.gitignore')
+        git('commit', '--quiet', '-m', 'Synthetic source revision')
+        revision = git('rev-parse', 'HEAD')
+        self.assertEqual(sync.render(self.repo, self.output, 'owner/game', revision), (2, 1))
+        (self.repo / 'build').mkdir()
+        (self.repo / 'build/generated.md').write_text('Generated')
+        (self.repo / 'later.md').write_text('Not in the source revision')
+        for target in ['build/generated.md', 'later.md']:
+            with self.subTest(target=target):
+                (self.repo / 'docs/a.md').write_text(f'# First\n[Target](../{target})\n')
+                with self.assertRaisesRegex(ValueError, 'absent from source revision'):
+                    sync.render(self.repo, self.output, 'owner/game', revision)
+        git('add', 'later.md')
+        git('commit', '--quiet', '-m', 'Later target')
+        with self.assertRaisesRegex(ValueError, 'absent from source revision'):
+            sync.render(self.repo, self.output, 'owner/game', revision)
+        self.assertEqual(sync.render(self.repo, self.output, 'owner/game', git('rev-parse', 'HEAD')), (2, 1))
 
     def test_preserves_unmanaged_sidebar_and_initial_home(self):
         self.output.mkdir()

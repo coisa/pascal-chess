@@ -1,7 +1,7 @@
 # Documentation renderer
 
 `wiki_sync.py` turns the repository's `docs/` Markdown and supported assets
-into files for a GitHub Wiki. It needs Python 3.9+, the source repository,
+into files for a GitHub Wiki. It needs Python 3.9+, Git, the source checkout,
 an output directory, `owner/repository` and a full source commit SHA.
 
 ```sh
@@ -21,6 +21,9 @@ their original source offsets. Nested labels, linked images and multiline
 reference definitions work; fenced/indented examples, multiline code spans
 and all other source formatting stay literal. Repository directories use
 tree URLs; repository images outside `docs/` use revision-pinned raw URLs.
+Repository link targets must exist in the specified Git commit; ignored,
+untracked or later-added paths fail validation. Root-relative GitHub URLs stay
+unchanged. Every pull request is checked because any file can be a link target.
 Navigation labels escape heading markup so each entry links to its Wiki page.
 Only the initial Home page is an allowed
 unmanaged bootstrap; an existing unmanaged sidebar requires explicit migration.
@@ -33,4 +36,5 @@ source and rerun; do not bypass it by deleting unrelated Wiki content.
 
 [Wiki publication](../docs/wiki-publication.md) explains credentials, the first
 page, triggers, verification and rollback. The workflow owns Git publication;
-the pure renderer is tested without credentials or a remote Wiki.
+the renderer uses isolated filesystem and Git fixtures without credentials or
+a remote Wiki. It reads the commit tree locally and disables Git lazy fetching.

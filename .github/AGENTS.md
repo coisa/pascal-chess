@@ -18,6 +18,8 @@ runs. Pull requests test and render documentation without credentials.
 ## Work Guidance
 
 Use the same Makefile targets locally and in CI.
+Run Wiki validation on every PR: documentation can reference any repository
+file, and those targets must exist in the source commit.
 
 ## Verification
 
