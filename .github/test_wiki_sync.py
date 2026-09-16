@@ -220,6 +220,14 @@ class WikiTests(unittest.TestCase):
         self.assertIn('[x](https://github.com/owner/game/wiki/b#part%29)', result)
         self.assertIn('[y](<https://github.com/owner/game/wiki/b?q=%3E&x=1#part%3E>)', result)
 
+    def test_navigation_falls_back_when_heading_has_no_text(self):
+        (self.repo / 'docs/a.md').write_text('# <img src="pic.png" alt="Game">\n')
+        self.render()
+        for page in ['Home.md', '_Sidebar.md']:
+            result = (self.output / page).read_text()
+            self.assertIn('[a](https://github.com/owner/game/wiki/a)', result)
+            self.assertNotIn('[](', result)
+
     def test_raw_urls_for_repository_images_outside_docs(self):
         (self.repo / 'images').mkdir()
         (self.repo / 'images/demo.png').write_bytes(b'image')

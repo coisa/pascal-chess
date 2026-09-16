@@ -194,7 +194,7 @@ def render(repo, output, repository, revision):
     planned = {target: markdown(path) for path, target in pages.items()}
     links = []
     for path, target in pages.items():
-        title = titles.get(path, path.stem)
+        title = titles.get(path) or path.stem
         # A heading can itself contain links or HTML; navigation labels are literal.
         title = ''.join('\\' + char if char in string.punctuation else char for char in title)
         links.append(f'- [{title}](https://github.com/{repository}/wiki/{quote(target[:-3])})')
