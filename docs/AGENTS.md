@@ -29,3 +29,4 @@ Check paths and inspect actual rendered previews after visual changes.
 - [try-your-project.md](try-your-project.md): reusable prompt and evaluation.
 - [validation.md](validation.md): executed coverage and limits.
 - `preview.png`: staged capture from the real renderer.
+- [wiki-publication.md](wiki-publication.md): publication setup and recovery.

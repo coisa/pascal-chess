@@ -1,4 +1,20 @@
 FPC ?= fpc
+.DEFAULT_GOAL := help
+WIKI_REPOSITORY ?= $(if $(GITHUB_REPOSITORY),$(GITHUB_REPOSITORY),coisa/pascal-chess)
+WIKI_REVISION ?= $(shell git rev-parse HEAD)
+WIKI_OUTPUT ?= build/wiki-preview
+WIKI_PYTHON = build/wiki-venv/bin/python
+
+.PHONY: wiki-check
+wiki-check: build/wiki-venv/.requirements-stamp
+	$(WIKI_PYTHON) .github/test_wiki_sync.py
+	$(WIKI_PYTHON) .github/wiki_sync.py --output "$(WIKI_OUTPUT)" --repository "$(WIKI_REPOSITORY)" --revision "$(WIKI_REVISION)"
+
+build/wiki-venv/.requirements-stamp: .github/requirements.txt
+	python3 -m venv build/wiki-venv
+	$(WIKI_PYTHON) -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r .github/requirements.txt
+	touch $@
+
 FPCFLAGS = -Mobjfpc -Sh -O2 -g -gl -Cr -Co -Ci -Sa -vew -Fusrc -FUbuild -FEbuild
 DOCKER ?= docker
 IMAGE ?= pascal-chess:local

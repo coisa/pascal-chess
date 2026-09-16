@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add docs-to-Wiki publication after default-branch merges, with credential-free
+  PR rendering, source links, assets and managed-file cleanup.
+- Preserve CommonMark code examples and nested links with a hash-pinned parser;
+  include its Python dependency in weekly Dependabot updates.
+
 ## [1.0.0] - 2026-09-15
 
 ### Added

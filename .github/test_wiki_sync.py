@@ -1,0 +1,327 @@
+#!/usr/bin/env python3
+"""Test documentation transformation and managed-file boundaries without network."""
+import importlib.util
+import json
+import os
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+MODULE = Path(__file__).with_name('wiki_sync.py')
+spec = importlib.util.spec_from_file_location('wiki_sync', MODULE)
+sync = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(sync)
+SCRATCH = MODULE.parent.parent / 'build'
+SCRATCH.mkdir(exist_ok=True)
+SHA = 'a' * 40
+
+
+class WikiTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(dir=SCRATCH, prefix='wiki-test-')
+        self.root = Path(self.temp.name)
+        self.repo, self.output = self.root / 'repo', self.root / 'wiki'
+        (self.repo / 'docs').mkdir(parents=True)
+        (self.repo / 'README.md').write_text('# Game\n')
+        (self.repo / 'docs/a.md').write_text('# First\n[Second](b.md#part) [Build](../README.md)\n![Image](pic.png)\n`[literal](missing.md)`\n```md\n[example](missing.md)\n```\n')
+        (self.repo / 'docs/b.md').write_text('# Second\n## Part\n')
+        (self.repo / 'docs/pic.png').write_bytes(b'synthetic-image')
+        # Parser/filesystem cases use a synthetic revision inventory. The Git
+        # integration test below exercises the real revision reader separately.
+        self.revision_inventory = patch.object(sync, 'revision_paths', side_effect=lambda repo, revision: {
+            '.', *(p.relative_to(repo).as_posix() for p in Path(repo).rglob('*')),
+        })
+        self.revision_inventory.start()
+        self.addCleanup(self.revision_inventory.stop)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def render(self):
+        return sync.render(self.repo, self.output, 'owner/game', SHA)
+
+    def test_links_assets_and_idempotence(self):
+        self.assertEqual(self.render(), (2, 1))
+        content = (self.output / 'a.md').read_text()
+        self.assertIn('https://github.com/owner/game/wiki/b#part', content)
+        self.assertIn(f'/blob/{SHA}/README.md', content)
+        self.assertIn('https://raw.githubusercontent.com/wiki/owner/game/assets/pic.png', content)
+        self.assertIn('`[literal](missing.md)`', content)
+        self.assertIn('```md\n[example](missing.md)\n```', content)
+        before = {p.relative_to(self.output): p.read_bytes() for p in self.output.rglob('*') if p.is_file()}
+        self.render()
+        self.assertEqual(before, {p.relative_to(self.output): p.read_bytes() for p in self.output.rglob('*') if p.is_file()})
+
+    def test_removes_only_previously_managed_pages(self):
+        self.render()
+        (self.output / 'Manual.md').write_text('Keep me')
+        (self.repo / 'docs/a.md').write_text('# First\n')
+        (self.repo / 'docs/b.md').unlink()
+        self.render()
+        self.assertFalse((self.output / 'b.md').exists())
+        self.assertEqual((self.output / 'Manual.md').read_text(), 'Keep me')
+
+    def test_refuses_collision_and_broken_links(self):
+        (self.repo / 'docs/Home.md').write_text('# Collision')
+        with self.assertRaises(ValueError): self.render()
+        (self.repo / 'docs/Home.md').unlink()
+        (self.repo / 'docs/a.md').write_text('[broken](missing.md)')
+        with self.assertRaises(ValueError): self.render()
+
+    def test_refuses_traversal_and_symlinks(self):
+        (self.repo / 'docs/a.md').write_text('[outside](../../private.md)')
+        with self.assertRaises(ValueError): self.render()
+        (self.repo / 'docs/a.md').write_text('# Fine')
+        (self.repo / 'docs/link.md').symlink_to(self.repo / 'README.md')
+        with self.assertRaises(ValueError): self.render()
+
+    def test_refuses_unsafe_manifest_and_unmanaged_overwrite(self):
+        self.render()
+        (self.output / sync.MANIFEST).write_text(json.dumps({'owner': 'docs-publisher', 'files': ['../outside.md']}))
+        with self.assertRaises(ValueError): self.render()
+        (self.output / sync.MANIFEST).unlink()
+        with self.assertRaises(ValueError): self.render()
+
+    def test_refuses_output_over_source(self):
+        with self.assertRaises(ValueError): sync.render(self.repo, self.repo / 'docs', 'owner/game', SHA)
+
+    def test_preserves_multiple_backtick_delimiters(self):
+        literal = '``[example](missing.md)`` and ```a ` [other](absent.md)```'
+        (self.repo / 'docs/a.md').write_text('# First\n' + literal + '\n[Real](b.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn(literal, result)
+        self.assertIn('[Real](https://github.com/owner/game/wiki/b)', result)
+
+    def test_preserves_indented_code(self):
+        literal = '    [example](missing.md)\n\t[other](absent.md)\n'
+        (self.repo / 'docs/a.md').write_text('# First\n\n' + literal)
+        self.render()
+        self.assertIn(literal, (self.output / 'a.md').read_text())
+
+    def test_whole_line_code_span_does_not_open_a_fence(self):
+        (self.repo / 'docs/a.md').write_text('# First\n\n```[literal](missing.md)```\n\n[Actual](b.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('```[literal](missing.md)```', result)
+        self.assertIn('[Actual](https://github.com/owner/game/wiki/b)', result)
+
+    def test_rewrites_reference_definitions(self):
+        (self.repo / 'docs/nested').mkdir()
+        (self.repo / 'docs/nested/page.md').write_text('# Nested\n')
+        (self.repo / 'docs/a.md').write_text('# First\n[Page][page] ![Picture][image]\n\n[page]: nested/page.md#section "Title"\n[image]: <pic.png>\n[code]: ../README.md\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('[page]: https://github.com/owner/game/wiki/nested--page#section "Title"', result)
+        self.assertIn('[image]: <https://raw.githubusercontent.com/wiki/owner/game/assets/pic.png>', result)
+        self.assertIn(f'[code]: https://github.com/owner/game/blob/{SHA}/README.md', result)
+
+    def test_preserves_multiline_code_spans(self):
+        literal = '`literal\n[example](missing.md)\ntext`'
+        (self.repo / 'docs/a.md').write_text('# First\n\n' + literal + '\n\n[Actual](b.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn(literal, result)
+        self.assertIn('[Actual](https://github.com/owner/game/wiki/b)', result)
+
+    def test_nested_labels_and_linked_images(self):
+        (self.repo / 'docs/a.md').write_text('# First\n[outer [inner]](../README.md) [![Picture](pic.png)](b.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn(f'[outer [inner]](https://github.com/owner/game/blob/{SHA}/README.md)', result)
+        self.assertIn('[![Picture](https://raw.githubusercontent.com/wiki/owner/game/assets/pic.png)](https://github.com/owner/game/wiki/b)', result)
+
+    def test_multiline_reference_definition(self):
+        (self.repo / 'docs/a.md').write_text('# First\n[Page][page]\n\n[page]:\n  <b.md>\n  "Title"\n')
+        self.render()
+        self.assertIn('[page]:\n  <https://github.com/owner/game/wiki/b>\n  "Title"', (self.output / 'a.md').read_text())
+
+    def test_container_offsets_and_escaped_labels(self):
+        (self.repo / 'docs/a.md').write_text('# First\n\n> [Quoted](b.md)\n\n- Item\n  - [Nested](../README.md)\n\n\\[literal](missing.md)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('> [Quoted](https://github.com/owner/game/wiki/b)', result)
+        self.assertIn(f'  - [Nested](https://github.com/owner/game/blob/{SHA}/README.md)', result)
+        self.assertIn('\\[literal](missing.md)', result)
+
+    def test_reference_offsets_inside_containers(self):
+        (self.repo / 'docs/a.md').write_text('# First\n\n> Café [Page][page]\n>\n> [page]: b.md\n\n- [Code][code]\n\n  [code]: <../README.md>\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('> Café [Page][page]', result)
+        self.assertIn('> [page]: https://github.com/owner/game/wiki/b', result)
+        self.assertIn(f'  [code]: <https://github.com/owner/game/blob/{SHA}/README.md>', result)
+
+    def test_multiline_reference_destinations_inside_quotes(self):
+        examples = ['> [Page][page]\n>\n> [page]:\n>   b.md\n>   "title"\n',
+                    '> - [Page][page]\n>\n>   [page]:\n>     b.md\n>     "title"\n',
+                    '> > [Page][page]\n> >\n> > [page]:\n> >   <b.md>\n']
+        for example in examples:
+            with self.subTest(example=example):
+                (self.repo / 'docs/a.md').write_text('# First\n\n' + example)
+                self.render()
+                self.assertEqual('# First\n\n' + example.replace('b.md', 'https://github.com/owner/game/wiki/b'),
+                                 (self.output / 'a.md').read_text())
+
+    def test_continued_reference_titles_inside_quotes_remain_literal(self):
+        example = '> [Page][page]\n>\n> [page]: b.md\n>   "Title [literal](missing.md)"\n'
+        (self.repo / 'docs/a.md').write_text('# First\n\n' + example)
+        self.render()
+        self.assertEqual('# First\n\n' + example.replace('b.md', 'https://github.com/owner/game/wiki/b'),
+                         (self.output / 'a.md').read_text())
+
+    def test_preserves_code_inside_containers_and_tab_indentation(self):
+        examples = ['> ```md\n> [quoted](missing.md)\n> ```\n',
+                    '- ```md\n  [listed](absent.md)\n  ```\n',
+                    ' \t[indented](missing.md)\n']
+        for literal in examples:
+            with self.subTest(literal=literal):
+                (self.repo / 'docs/a.md').write_text('# First\n\n' + literal)
+                self.render()
+                self.assertIn(literal, (self.output / 'a.md').read_text())
+
+    def test_heading_markup_cannot_replace_navigation_links(self):
+        (self.repo / 'docs/a.md').write_text('# API [reference](b.md) <a href="https://example.test">guide</a>\n')
+        self.render()
+        for page in ['Home.md', '_Sidebar.md']:
+            parsed = sync.Parser().parse((self.output / page).read_text())
+            links = []
+
+            def visit(node):
+                if isinstance(node, sync.inline.Link):
+                    links.append(node.dest)
+                children = getattr(node, 'children', [])
+                if isinstance(children, list):
+                    for child in children:
+                        visit(child)
+
+            visit(parsed)
+            self.assertEqual(links.count('https://github.com/owner/game/wiki/a'), 1)
+            self.assertNotIn('b.md', links)
+            self.assertNotIn('<a href=', (self.output / page).read_text())
+
+    def test_navigation_uses_parsed_h1_and_ignores_literal_headings(self):
+        examples = ['```md\n# Literal code title\n```\n\n# Actual title\n',
+                    '<!--\n# Literal comment title\n-->\n\nActual title\n============\n']
+        for example in examples:
+            with self.subTest(example=example):
+                (self.repo / 'docs/a.md').write_text(example)
+                self.render()
+                for page in ['Home.md', '_Sidebar.md']:
+                    result = (self.output / page).read_text()
+                    self.assertIn('[Actual title](https://github.com/owner/game/wiki/a)', result)
+                    self.assertNotIn('Literal', result)
+
+    def test_url_suffixes_preserve_escaped_markdown_delimiters(self):
+        (self.repo / 'docs/a.md').write_text('# First\n[x](b.md#part\\)) [y](<b.md?q=\\>&x=1#part\\>>)\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertIn('[x](https://github.com/owner/game/wiki/b#part%29)', result)
+        self.assertIn('[y](<https://github.com/owner/game/wiki/b?q=%3E&x=1#part%3E>)', result)
+
+    def test_navigation_falls_back_when_heading_has_no_text(self):
+        (self.repo / 'docs/a.md').write_text('# <img src="pic.png" alt="Game">\n')
+        self.render()
+        for page in ['Home.md', '_Sidebar.md']:
+            result = (self.output / page).read_text()
+            self.assertIn('[a](https://github.com/owner/game/wiki/a)', result)
+            self.assertNotIn('[](', result)
+
+    def test_raw_urls_for_repository_images_outside_docs(self):
+        (self.repo / 'images').mkdir()
+        (self.repo / 'images/demo.png').write_bytes(b'image')
+        (self.repo / 'docs/a.md').write_text('# First\n![Demo](../images/demo.png)\n![Again][image]\n\n[image]: ../images/demo.png\n')
+        self.render()
+        result = (self.output / 'a.md').read_text()
+        self.assertEqual(result.count(f'https://raw.githubusercontent.com/owner/game/{SHA}/images/demo.png'), 2)
+
+    def test_file_ancestor_fails_before_modifying_managed_pages(self):
+        self.render()
+        (self.output / 'assets/screenshots').write_bytes(b'unmanaged-file')
+        before = {p.relative_to(self.output): p.read_bytes() for p in self.output.rglob('*') if p.is_file()}
+        (self.repo / 'docs/a.md').write_text('# Changed\n')
+        (self.repo / 'docs/screenshots').mkdir()
+        (self.repo / 'docs/screenshots/play.png').write_bytes(b'new-image')
+        with self.assertRaisesRegex(ValueError, 'ancestor is not a directory'):
+            self.render()
+        self.assertEqual(before, {p.relative_to(self.output): p.read_bytes() for p in self.output.rglob('*') if p.is_file()})
+
+    def test_uses_tree_urls_for_directories(self):
+        (self.repo / 'src').mkdir()
+        (self.repo / 'docs/a.md').write_text('# First\n[Sources](../src/)\n')
+        self.render()
+        self.assertIn(f'/tree/{SHA}/src)', (self.output / 'a.md').read_text())
+
+    def test_preserves_root_relative_github_links(self):
+        content = '# First\n[Issues](/owner/game/issues)\n![Badge](/owner/game/actions/badge.svg)\n[Reference][root]\n\n[root]: /owner/game/pulls\n'
+        (self.repo / 'docs/a.md').write_text(content)
+        self.render()
+        self.assertEqual(content, (self.output / 'a.md').read_text())
+
+    def test_git_revision_rejects_ignored_untracked_and_later_targets(self):
+        self.revision_inventory.stop()
+        environment = dict(os.environ)
+        for key in ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY',
+                    'GIT_ALTERNATE_OBJECT_DIRECTORIES']:
+            environment.pop(key, None)
+        environment.update(GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull,
+                           GIT_AUTHOR_NAME='Wiki test', GIT_COMMITTER_NAME='Wiki test',
+                           GIT_AUTHOR_EMAIL='wiki@example.invalid', GIT_COMMITTER_EMAIL='wiki@example.invalid')
+
+        def git(*arguments):
+            return sync.subprocess.run(['git', '-c', 'commit.gpgsign=false', '-c',
+                                        'core.hooksPath=' + os.devnull, *arguments],
+                                       cwd=self.repo, env=environment, check=True,
+                                       capture_output=True, text=True).stdout.strip()
+
+        git('init', '--quiet')
+        (self.repo / '.gitignore').write_text('/build/\n')
+        git('add', 'docs', 'README.md', '.gitignore')
+        git('commit', '--quiet', '-m', 'Synthetic source revision')
+        revision = git('rev-parse', 'HEAD')
+        self.assertEqual(sync.render(self.repo, self.output, 'owner/game', revision), (2, 1))
+        (self.repo / 'build').mkdir()
+        (self.repo / 'build/generated.md').write_text('Generated')
+        (self.repo / 'later.md').write_text('Not in the source revision')
+        for target in ['build/generated.md', 'later.md']:
+            with self.subTest(target=target):
+                (self.repo / 'docs/a.md').write_text(f'# First\n[Target](../{target})\n')
+                with self.assertRaisesRegex(ValueError, 'absent from source revision'):
+                    sync.render(self.repo, self.output, 'owner/game', revision)
+        git('add', 'later.md')
+        git('commit', '--quiet', '-m', 'Later target')
+        with self.assertRaisesRegex(ValueError, 'absent from source revision'):
+            sync.render(self.repo, self.output, 'owner/game', revision)
+        self.assertEqual(sync.render(self.repo, self.output, 'owner/game', git('rev-parse', 'HEAD')), (2, 1))
+
+    def test_preserves_unmanaged_sidebar_and_initial_home(self):
+        self.output.mkdir()
+        (self.output / 'Home.md').write_text('Bootstrap')
+        (self.output / '_Sidebar.md').write_text('Manual navigation')
+        with self.assertRaises(ValueError): self.render()
+        self.assertEqual((self.output / '_Sidebar.md').read_text(), 'Manual navigation')
+        self.assertEqual((self.output / 'Home.md').read_text(), 'Bootstrap')
+        (self.output / '_Sidebar.md').unlink()
+        self.render()
+        self.assertIn('Published from', (self.output / 'Home.md').read_text())
+
+    def test_refuses_symlink_ancestors_before_write_or_stale_delete(self):
+        self.render()
+        (self.output / 'assets').rename(self.output / 'manual-assets')
+        (self.output / 'assets').symlink_to(self.output / 'manual-assets', target_is_directory=True)
+        manual = self.output / 'manual-assets/pic.png'
+        manual.write_bytes(b'unmanaged-original')
+        manifest = (self.output / sync.MANIFEST).read_bytes()
+        with self.assertRaises(ValueError): self.render()
+        self.assertEqual(manual.read_bytes(), b'unmanaged-original')
+        self.assertEqual((self.output / sync.MANIFEST).read_bytes(), manifest)
+        (self.repo / 'docs/pic.png').unlink()
+        (self.repo / 'docs/a.md').write_text('# First\n')
+        with self.assertRaises(ValueError): self.render()
+        self.assertEqual(manual.read_bytes(), b'unmanaged-original')
+        self.assertEqual((self.output / sync.MANIFEST).read_bytes(), manifest)
+
+
+if __name__ == '__main__':
+    unittest.main()

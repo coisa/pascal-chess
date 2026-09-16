@@ -23,3 +23,4 @@ Check that each requirement has a concrete verification route.
 ## Child DOX Index
 
 - [modernization.md](modernization.md): implementation and release recipe.
+- [wiki-publication.md](wiki-publication.md): documentation automation and acceptance.
