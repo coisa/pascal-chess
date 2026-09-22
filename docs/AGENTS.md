@@ -24,9 +24,10 @@ Check paths and inspect actual rendered previews after visual changes.
 
 ## Child DOX Index
 
-- [baseline.md](baseline.md): original source and verified provenance.
-- [architecture.md](architecture.md): engine, search and native platform design.
-- [try-your-project.md](try-your-project.md): reusable prompt and evaluation.
-- [validation.md](validation.md): executed coverage and limits.
+- [baseline.md](https://github.com/coisa/pascal-chess/blob/master/docs/baseline.md): original source and verified provenance.
+- [architecture.md](https://github.com/coisa/pascal-chess/blob/master/docs/architecture.md): engine, search and native platform design.
+- [try-your-project.md](https://github.com/coisa/pascal-chess/blob/master/docs/try-your-project.md): reusable prompt and evaluation.
+- [validation.md](https://github.com/coisa/pascal-chess/blob/master/docs/validation.md): executed coverage and limits.
 - `preview.png`: staged capture from the real renderer.
-- [wiki-publication.md](wiki-publication.md): publication setup and recovery.
+- [Home.md](https://github.com/coisa/pascal-chess/blob/master/docs/Home.md): source-controlled Wiki landing page.
+- [wiki-publication.md](https://github.com/coisa/pascal-chess/blob/master/docs/wiki-publication.md): simple Wiki synchronization and verification.

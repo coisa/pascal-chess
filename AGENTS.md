@@ -10,8 +10,8 @@ desktop game. Application logic, chess rules, search and rule tests stay Pascal.
 The owner authorized modernization, English translation, unarchiving, an issue
 and PR, a 0.1.0 baseline release, merge and a 1.0.0 release. Wiki synchronization
 belongs in a separate PR. No license or external service credentials are implied.
-The Wiki publisher uses only a dedicated configured secret; never repurpose a
-developer token. PR validation remains credential-free.
+Wiki synchronization uses the built-in Actions token on default-branch runs.
+Pull requests do not publish.
 
 ## Local Contracts
 
@@ -40,6 +40,6 @@ checks and review findings at the final commit before merging.
 - [tests/AGENTS.md](tests/AGENTS.md): synthetic rule and executable integration proof.
 - [docs/AGENTS.md](docs/AGENTS.md): provenance, architecture, challenge and evidence.
 - [plans/AGENTS.md](plans/AGENTS.md): canonical modernization recipe.
-- [.github/AGENTS.md](.github/AGENTS.md): bounded, read-only CI validation.
+- [.github/AGENTS.md](.github/AGENTS.md): Linux game validation and Wiki synchronization.
 - [README.md](README.md): play, build, controls and the experiment.
 - [CHANGELOG.md](CHANGELOG.md): observable release history.

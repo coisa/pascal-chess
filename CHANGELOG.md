@@ -2,10 +2,8 @@
 
 ## Unreleased
 
-- Add docs-to-Wiki publication after default-branch merges, with credential-free
-  PR rendering, source links, assets and managed-file cleanup.
-- Preserve CommonMark code examples and nested links with a hash-pinned parser;
-  include its Python dependency in weekly Dependabot updates.
+- Add a single workflow to mirror `docs/` to the Wiki with the built-in
+  Actions token, publishing only changed files after default-branch updates.
 
 ## [1.0.0] - 2026-09-15
 

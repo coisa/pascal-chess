@@ -1,2 +1,0 @@
-# CommonMark parsing for Wiki links; no optional extensions/dependencies.
-marko==2.2.4 --hash=sha256:d80510506edba096ec49d4720a09645fa0bb78e7b7b88697f20032fc19730aa9

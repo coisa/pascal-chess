@@ -2,34 +2,30 @@
 
 ## Purpose
 
-Validate pull requests and master with reproducible Linux builds; publish docs
-to the initialized Wiki from the default branch.
+Validate the game and synchronize documentation to the GitHub Wiki.
 
 ## Ownership
 
-The root contract owns merge and publication. Tests do not need secrets.
+The root contract owns merge and publication. The owner authorized the
+docs-to-Wiki workflow; publication runs only from the default branch.
 
 ## Local Contracts
 
-Pin external actions by SHA. Use read-only permissions, standard runners and
-bounded jobs. Wiki publication uses a dedicated secret only on default-branch
-runs. Pull requests test and render documentation without credentials.
+Write in English. Pin external actions by SHA and bound job time.
+Game tests use read-only permissions. Wiki synchronization uses the built-in
+`GITHUB_TOKEN` with `contents: write`; pull requests do not publish.
 
 ## Work Guidance
 
-Use the same Makefile targets locally and in CI.
-Run Wiki validation on every PR: documentation can reference any repository
-file, and those targets must exist in the source commit.
+Use the game Makefile targets locally and in CI. Keep Wiki synchronization
+in one workflow: clone, mirror `docs/`, commit changes and push.
 
 ## Verification
 
-Inspect actual check results at the final PR commit.
+Check workflow syntax and actual Actions results before claiming publication.
 
 ## Child DOX Index
 
-- `workflows/ci.yml`: shared Linux AMD64/ARM64 validation.
-- `dependabot.yml`: weekly Actions, Docker and Python update PRs; no automatic merge.
-- `requirements.txt`: hash-pinned Markdown parser installed in `build/wiki-venv`.
-- `workflows/wiki.yml`: PR rendering and default-branch Wiki publication.
-- [wiki_sync.md](wiki_sync.md): renderer inputs, outputs, boundaries and checks.
-- `test_wiki_sync.py`: isolated rendering and managed-file boundary tests.
+- `workflows/ci.yml`: Linux AMD64/ARM64 game validation.
+- `workflows/wiki-sync.yml`: default-branch documentation mirror.
+- `dependabot.yml`: weekly Actions and Docker update PRs; no automatic merge.

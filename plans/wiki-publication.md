@@ -2,21 +2,16 @@
 
 Tracks [issue #4](https://github.com/coisa/pascal-chess/issues/4).
 
-1. Render the canonical `docs/` Markdown and assets into an isolated Wiki tree.
-   Rewrite links, record the source SHA and manage only manifest-owned files.
-2. Validate on pull requests without credentials. Publish after a merge into
-   the default branch, checking out its latest source and using a dedicated
-   `WIKI_TOKEN`. Initialize the Wiki once before the first publication.
-3. Install the hash-pinned CommonMark parser in an isolated build environment.
-   Extend the existing weekly Dependabot configuration to cover Python updates.
-4. Test idempotence, links, assets, stale managed files, collisions and unsafe
-   paths; inspect the actual GitHub run before claiming publication succeeded.
+1. Use one workflow to copy `docs/` into the initialized GitHub Wiki after
+   documentation changes reach the default branch, or on manual dispatch.
+2. Authenticate with the built-in `GITHUB_TOKEN` and `contents: write`.
+   Clone the Wiki, mirror files with rsync, and commit/push only changes.
+3. Keep `Home.md` and links in the source documentation. No Markdown renderer,
+   Python dependencies or separate preview pipeline are needed.
+4. Keep weekly Dependabot updates for Actions and Docker.
+5. Validate the workflow and exercise copy, deletion and no-op behavior against
+   a disposable local Git remote. Confirm actual publication from an Actions run.
 
-The renderer and workflow are independent of gameplay. Existing 1.0.0 release
-history remains unchanged. Roll back through a source revert and a new sync;
-disable the workflow to stop publication. Never force-push the Wiki or export
-a developer's interactive token into CI.
-
-Acceptance requires passing PR checks and independent review. Deployment also
-requires the configured secret, an initialized Wiki and a successful default-
-branch run whose source link matches the published documentation.
+The Wiki is a generated mirror: edit `docs/`, including its home page.
+Rollback uses a source revert and another sync. Keep the existing PR open for
+review; local validation does not establish that a remote Wiki push succeeded.
