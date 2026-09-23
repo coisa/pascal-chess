@@ -7,7 +7,7 @@ The result is an offline native chess game. Rules, computer opponent, interface
 and rule tests are written in Free Pascal. SDL2 supplies the window, drawing,
 input and audio; SDL2_ttf supplies readable text.
 
-![Actual Pascal/SDL renderer, showing a staged opening and legal knight moves](docs/preview.png)
+![Actual Pascal/SDL renderer, showing a staged opening and legal knight moves](docs/Preview.png)
 
 *A reproducible renderer capture of a staged Ruy Lopez opening, not a claimed
 human game or an image mockup. Run `make preview` to regenerate it.*
@@ -101,8 +101,8 @@ The second uses your installed native dependencies. The last also needs
 ImageMagick. CI runs on Linux AMD64 and ARM64; Dependabot checks Actions and
 Docker weekly. A pinned APT snapshot still needs deliberate maintenance.
 
-Read [validation](docs/validation.md) for executed checks and platform limits,
-[architecture](docs/architecture.md) for the Pascal design, and
+Read [validation](docs/Validation.md) for executed checks and platform limits,
+[architecture](docs/Architecture.md) for the Pascal design, and
 [the implementation recipe](plans/modernization.md) for replication.
 
 ## Why this repository exists
@@ -116,9 +116,9 @@ is objectively the best or that the work required only one unattended step.
 
 The [0.1.0 baseline](https://github.com/coisa/pascal-chess/releases/tag/v0.1.0)
 preserves that original. [Issue #1](https://github.com/coisa/pascal-chess/issues/1)
-tracks the modernization. [Origin and differences](docs/baseline.md) explain
+tracks the modernization. [Origin and differences](docs/Baseline.md) explain
 what actually changed. Want to try your own? Start with
-[the reusable college-project challenge](docs/try-your-project.md).
+[the reusable college-project challenge](docs/Try%20your%20Project.md).
 
 ## Scope
 

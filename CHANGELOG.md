@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Give Wiki pages readable filenames and update documentation links.
 - Add a single workflow to mirror `docs/` to the Wiki with the built-in
   Actions token, publishing only changed files after default-branch updates.
 

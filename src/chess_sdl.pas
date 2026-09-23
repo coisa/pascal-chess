@@ -6,7 +6,7 @@ interface
 
 uses Dynlibs;
 
-{ Minimal declarations for the public SDL2 C ABI. See docs/architecture.md. }
+{ Minimal declarations for the public SDL2 C ABI. See docs/Architecture.md. }
 type
   TColor = record R, G, B, A: Byte; end;
   TRect = record X, Y, W, H: LongInt; end;
