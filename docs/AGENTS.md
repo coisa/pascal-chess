@@ -13,6 +13,7 @@ The owner confirms the university provenance. Current code and tests own claims.
 Write English, without inventing course, date, grade, AI ranking or engine Elo.
 Label staged screenshots and distinguish native, headless and manual testing.
 Use current canonical pages; source history belongs in Git and the baseline tag.
+Name Wiki pages with a leading capital and readable words; encode spaces in URLs.
 
 ## Work Guidance
 
@@ -24,8 +25,10 @@ Check paths and inspect actual rendered previews after visual changes.
 
 ## Child DOX Index
 
-- [baseline.md](baseline.md): original source and verified provenance.
-- [architecture.md](architecture.md): engine, search and native platform design.
-- [try-your-project.md](try-your-project.md): reusable prompt and evaluation.
-- [validation.md](validation.md): executed coverage and limits.
-- `preview.png`: staged capture from the real renderer.
+- [Baseline.md](https://github.com/coisa/pascal-chess/blob/master/docs/Baseline.md): original source and verified provenance.
+- [Architecture.md](https://github.com/coisa/pascal-chess/blob/master/docs/Architecture.md): engine, search and native platform design.
+- [Try your Project.md](https://github.com/coisa/pascal-chess/blob/master/docs/Try%20your%20Project.md): reusable prompt and evaluation.
+- [Validation.md](https://github.com/coisa/pascal-chess/blob/master/docs/Validation.md): executed coverage and limits.
+- `Preview.png`: staged capture from the real renderer.
+- [Home.md](https://github.com/coisa/pascal-chess/blob/master/docs/Home.md): source-controlled Wiki landing page.
+- [Wiki Publication.md](https://github.com/coisa/pascal-chess/blob/master/docs/Wiki%20Publication.md): simple Wiki synchronization and verification.

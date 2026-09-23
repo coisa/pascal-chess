@@ -42,4 +42,4 @@ smoke:
 preview: | build
 	$(DOCKER) build --target build -t pascal-chess-build:local .
 	$(DOCKER) run --rm --network none -e SDL_VIDEODRIVER=dummy --mount "type=bind,src=$(CURDIR)/build,target=/captures" pascal-chess-build:local ./build/chess --snapshot /captures/play.bmp --scene play --no-audio
-	magick build/play.bmp -strip docs/preview.png
+	magick build/play.bmp -strip docs/Preview.png
