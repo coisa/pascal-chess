@@ -1,6 +1,6 @@
 # Pascal Chess modernization
 
-Implementation recipe for [issue #1](https://github.com/coisa/pascal-chess/issues/1).
+Implementation recipe for [issue #1](https://github.com/artificenerd/pascal-chess/issues/1).
 
 ## Outcome and authority
 

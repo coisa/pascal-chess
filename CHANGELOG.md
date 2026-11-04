@@ -31,5 +31,5 @@
 
 - Preserve the original university exercise at `bec5c0cedae44637e2086ba9d6d52eb42a64b945`.
 
-[1.0.0]: https://github.com/coisa/pascal-chess/compare/v0.1.0...v1.0.0
-[0.1.0]: https://github.com/coisa/pascal-chess/releases/tag/v0.1.0
+[1.0.0]: https://github.com/artificenerd/pascal-chess/compare/v0.1.0...v1.0.0
+[0.1.0]: https://github.com/artificenerd/pascal-chess/releases/tag/v0.1.0

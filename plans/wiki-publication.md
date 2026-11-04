@@ -1,6 +1,6 @@
 # Documentation publication
 
-Tracks [issue #4](https://github.com/coisa/pascal-chess/issues/4).
+Tracks [issue #4](https://github.com/artificenerd/pascal-chess/issues/4).
 
 1. Use one workflow to copy `docs/` into the initialized GitHub Wiki after
    documentation changes reach the default branch, or on manual dispatch.

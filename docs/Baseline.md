@@ -2,7 +2,7 @@
 
 The owner identifies this as a university project. No course name, institution,
 grade or original assignment date was supplied, so this documentation does not
-invent them. The original is preserved by [release 0.1.0](https://github.com/coisa/pascal-chess/releases/tag/v0.1.0)
+invent them. The original is preserved by [release 0.1.0](https://github.com/artificenerd/pascal-chess/releases/tag/v0.1.0)
 at commit `bec5c0cedae44637e2086ba9d6d52eb42a64b945`.
 
 Source inspection found one 6,516-byte `chess.pas` file. It uses CRT to draw a

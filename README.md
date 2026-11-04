@@ -114,8 +114,8 @@ the complete implementation and delivery flow. This is an experiment in what
 an AI-assisted refactor can produce today, not proof that a particular model
 is objectively the best or that the work required only one unattended step.
 
-The [0.1.0 baseline](https://github.com/coisa/pascal-chess/releases/tag/v0.1.0)
-preserves that original. [Issue #1](https://github.com/coisa/pascal-chess/issues/1)
+The [0.1.0 baseline](https://github.com/artificenerd/pascal-chess/releases/tag/v0.1.0)
+preserves that original. [Issue #1](https://github.com/artificenerd/pascal-chess/issues/1)
 tracks the modernization. [Origin and differences](docs/Baseline.md) explain
 what actually changed. Want to try your own? Start with
 [the reusable college-project challenge](docs/Try%20your%20Project.md).

@@ -25,10 +25,10 @@ Check paths and inspect actual rendered previews after visual changes.
 
 ## Child DOX Index
 
-- [Baseline.md](https://github.com/coisa/pascal-chess/blob/master/docs/Baseline.md): original source and verified provenance.
-- [Architecture.md](https://github.com/coisa/pascal-chess/blob/master/docs/Architecture.md): engine, search and native platform design.
-- [Try your Project.md](https://github.com/coisa/pascal-chess/blob/master/docs/Try%20your%20Project.md): reusable prompt and evaluation.
-- [Validation.md](https://github.com/coisa/pascal-chess/blob/master/docs/Validation.md): executed coverage and limits.
+- [Baseline.md](https://github.com/artificenerd/pascal-chess/blob/master/docs/Baseline.md): original source and verified provenance.
+- [Architecture.md](https://github.com/artificenerd/pascal-chess/blob/master/docs/Architecture.md): engine, search and native platform design.
+- [Try your Project.md](https://github.com/artificenerd/pascal-chess/blob/master/docs/Try%20your%20Project.md): reusable prompt and evaluation.
+- [Validation.md](https://github.com/artificenerd/pascal-chess/blob/master/docs/Validation.md): executed coverage and limits.
 - `Preview.png`: staged capture from the real renderer.
-- [Home.md](https://github.com/coisa/pascal-chess/blob/master/docs/Home.md): source-controlled Wiki landing page.
-- [Wiki Publication.md](https://github.com/coisa/pascal-chess/blob/master/docs/Wiki%20Publication.md): simple Wiki synchronization and verification.
+- [Home.md](https://github.com/artificenerd/pascal-chess/blob/master/docs/Home.md): source-controlled Wiki landing page.
+- [Wiki Publication.md](https://github.com/artificenerd/pascal-chess/blob/master/docs/Wiki%20Publication.md): simple Wiki synchronization and verification.

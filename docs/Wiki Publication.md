@@ -1,6 +1,6 @@
 # Publishing docs to the Wiki
 
-[Sync Documentation to GitHub Wiki](https://github.com/coisa/pascal-chess/actions/workflows/wiki-sync.yml)
+[Sync Documentation to GitHub Wiki](https://github.com/artificenerd/pascal-chess/actions/workflows/wiki-sync.yml)
 runs when `docs/` or the workflow changes on the default branch (`master`
 today; the trigger also accepts `main`). It can also be dispatched manually
 on that branch.

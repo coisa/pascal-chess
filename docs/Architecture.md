@@ -5,7 +5,7 @@
 `chess.pas` launches `chess_desktop`; `ChessCLI.pas` exposes a text game and
 analysis commands. Both call `chess_engine` and `chess_search`. `chess_sdl` is
 a small dynamic adapter for SDL2/SDL2_ttf's public C ABI, adapted from the same
-owner's [Pascal Snake](https://github.com/coisa/pascal-snake) implementation.
+owner's [Pascal Snake](https://github.com/artificenerd/pascal-snake) implementation.
 No Stockfish binary, browser engine, Python chess rules or remote model plays
 the opponent. Python only drives integration tests.
 
