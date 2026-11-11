@@ -1,5 +1,5 @@
 # Debian official multi-architecture index, captured 2026-09-13.
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS toolchain
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS toolchain
 
 # Snapshot fixes transitive packages too. APT signatures remain mandatory;
 # only expiry is disabled for the immutable historical package index.
@@ -23,7 +23,7 @@ RUN make local-build local-test
 FROM build AS test
 CMD ["make", "local-test", "local-smoke"]
 
-FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS game
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS game
 COPY --from=build /work/build/ChessCLI /usr/local/bin/ChessCLI
 USER 65532:65532
 ENV LANG=C.UTF-8 TERM=xterm-256color
